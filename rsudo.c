@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
     int size;
     int c = 0;
     int start=1;
+    int proc = num_commands-1;
 
     /* execute each piped command */
     while(c!=num_commands) {
@@ -77,7 +78,11 @@ int main(int argc, char *argv[])
         /* set uid to other user uid */
         if(c==0 && (strcmp(argvs[0],"-u")==0)){
             char *usr_name = argvs[1];
-            struct passwd* user = getpwnam(usr_name);
+            struct passwd* user; 
+            if((user=getpwnam(usr_name))==NULL){
+                printf("User doesn't exist\n!");
+                exit(EXIT_FAILURE);
+            }
             suid = user->pw_uid; 
             seteuid(suid);
             offset = 2;
@@ -111,6 +116,11 @@ int main(int argc, char *argv[])
         
         /* revoke the priviledges */
         setuid(ruid);
+
+        if(exit_status!=0){
+            proc = c;
+            break;
+        }
         
         start = pipe_index[c]+1;
         c+=1;
@@ -121,10 +131,10 @@ int main(int argc, char *argv[])
 
     char buf[1];
     int nbytes;
-    while((nbytes=read(fds[c-1][0],buf,1))>0){
+    while((nbytes=read(fds[proc][0],buf,1))>0){
         printf("%s",buf);
     }
 
-    exit(EXIT_SUCCESS);
+    exit(exit_status);
 
 }
